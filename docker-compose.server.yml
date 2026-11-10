@@ -1,0 +1,53 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set a unique database password}
+      MYSQL_DATABASE: techmonitor
+    volumes:
+      - server_mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD --silent']
+      start_period: 30s
+      interval: 5s
+      retries: 30
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_ROOT_PASSWORD:?Set a unique database password}
+      DB_NAME: techmonitor
+      ACCOUNT_ENCRYPTION_KEY: ${ACCOUNT_ENCRYPTION_KEY:?Required}
+      INGEST_API_KEY: ${INGEST_API_KEY:?Required}
+      APP_URL: https://${SCADA_DOMAIN:?Set the SCADA subdomain}:9443
+      COOKIE_SECURE: 'true'
+      MAIL_MODE: smtp
+      SMTP_HOST: ${SMTP_HOST:?Required}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:?Required}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?Required}
+      MAIL_FROM: ${MAIL_FROM:?Required}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Required}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Required}
+    depends_on:
+      mysql:
+        condition: service_healthy
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - '9443:443'
+    environment:
+      SCADA_DOMAIN: ${SCADA_DOMAIN:?Required}
+    volumes:
+      - ./deploy/nginx-server.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+volumes:
+  server_mysql_data:

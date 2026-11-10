@@ -1,0 +1,13 @@
+{
+  "name": "tech-monitor-sensor-reader",
+  "version": "1.0.0",
+  "description": "UART sensor reader for Tech Monitor — reads /dev/ttyS2 and posts temperature to backend",
+  "main": "sensor-reader.js",
+  "scripts": {
+    "start": "node sensor-reader.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "serialport": "^12.0.0"
+  }
+}

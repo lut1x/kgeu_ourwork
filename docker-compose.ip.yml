@@ -1,0 +1,68 @@
+name: tech-scada
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '5m'
+    max-file: '2'
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    mem_limit: 280m
+    memswap_limit: 640m
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Required}
+      MYSQL_DATABASE: techmonitor
+    command: [--innodb-buffer-pool-size=48M, --innodb-redo-log-capacity=64M, --performance-schema=OFF, --max-connections=20, --temptable-max-ram=16M, --table-open-cache=128, --skip-log-bin]
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD=$$MYSQL_ROOT_PASSWORD mysql --protocol=TCP -h127.0.0.1 -uroot -e "SELECT 1" >/dev/null 2>&1']
+      start_period: 60s
+      interval: 10s
+      timeout: 10s
+      retries: 30
+    logging: *logging
+  backend:
+    image: tech-scada-backend:ip
+    build:
+      context: ./backend
+      dockerfile: ../deploy/backend-ip.Dockerfile
+    restart: unless-stopped
+    mem_limit: 192m
+    memswap_limit: 384m
+    env_file: .env.local
+    environment:
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: ${DB_ROOT_PASSWORD:?Required}
+      DB_NAME: techmonitor
+      NODE_OPTIONS: --max-old-space-size=96
+      UV_THREADPOOL_SIZE: '1'
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, 'fetch("http://127.0.0.1:3001/api/health").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))']
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+    logging: *logging
+  frontend:
+    image: nginx:alpine
+    restart: unless-stopped
+    mem_limit: 32m
+    memswap_limit: 64m
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./deploy/nginx-ip.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/acme:/var/www/acme:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    logging: *logging
+volumes:
+  mysql_data:

@@ -1,0 +1,20 @@
+{
+  "name": "tech-monitor-backend",
+  "version": "1.0.0",
+  "description": "Backend API for technical parameter monitoring",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test auth.test.js communication.test.js",
+    "test:integration": "node --test integration.test.js sensor-access.test.js collectors.test.js"
+  },
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mysql2": "^3.9.0",
+    "nodemailer": "^10.0.13",
+    "socket.io": "^4.7.4"
+  }
+}

@@ -1,0 +1,18 @@
+[Unit]
+Description=Start SCADA stack after host boot
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+ConditionPathExists=!/etc/scada-maintenance
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/scada up -d --no-build
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

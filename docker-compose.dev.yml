@@ -1,0 +1,40 @@
+# Development override — use simulator instead of sensor-reader
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# This file overrides the production config for local development
+# on machines without /dev/ttyS2 (i.e. your desktop PC).
+
+services:
+  backend:
+    environment:
+      MAIL_MODE: ${MAIL_MODE:-local}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+
+  mailpit:
+    image: axllent/mailpit:v1.29
+    container_name: techmonitor-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - techmonitor-net
+
+  # Disable sensor-reader in dev mode
+  sensor-reader:
+    profiles:
+      - disabled
+
+  # ── Simulator (replaces sensor-reader for dev) ─────────────────
+  simulator:
+    build: ./simulator
+    container_name: techmonitor-simulator
+    restart: unless-stopped
+    environment:
+      API_URL: http://backend:3001/api/data
+      INGEST_API_KEY: ${INGEST_API_KEY:?Set INGEST_API_KEY in .env.local}
+      INTERVAL_MS: 1000
+    depends_on:
+      - backend
+    networks:
+      - techmonitor-net

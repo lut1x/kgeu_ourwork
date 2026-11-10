@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "d5a10b20397022f80656d0450d98ed6ee411bcd531bbf45c36d716e63455d784",
+  "original_files_unchanged": {
+    "frontend/src/App.jsx": true,
+    "frontend/src/main.jsx": true,
+    "frontend/vite.config.js": true,
+    "backend/auth.js": true
+  }
+}

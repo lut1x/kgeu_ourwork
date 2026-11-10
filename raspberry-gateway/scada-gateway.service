@@ -1,0 +1,29 @@
+[Unit]
+Description=SCADA UART gateway
+After=network.target systemd-timesyncd.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=scada-gateway
+Group=scada-gateway
+SupplementaryGroups=dialout
+EnvironmentFile=/etc/scada-gateway/gateway.env
+ExecStart=/usr/bin/python3 /opt/scada-gateway/gateway.py
+Restart=always
+RestartSec=5
+WatchdogSec=90
+NotifyAccess=main
+TimeoutStopSec=25
+MemoryMax=128M
+TasksMax=96
+OOMPolicy=stop
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/scada-gateway
+
+[Install]
+WantedBy=multi-user.target

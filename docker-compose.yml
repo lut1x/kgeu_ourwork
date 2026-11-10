@@ -1,0 +1,91 @@
+services:
+  # ── MySQL Database ────────────────────────────────────────────
+  mysql:
+    image: mysql:8.4
+    container_name: techmonitor-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: techmonitor
+      MYSQL_DATABASE: techmonitor
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql8_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD --silent"]
+      start_period: 30s
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - techmonitor-net
+
+  # ── Backend API ────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: techmonitor-backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: techmonitor
+      DB_NAME: techmonitor
+      PORT: 3001
+      ACCOUNT_ENCRYPTION_KEY: ${ACCOUNT_ENCRYPTION_KEY:?Set ACCOUNT_ENCRYPTION_KEY in .env.local}
+      INGEST_API_KEY: ${INGEST_API_KEY:?Set INGEST_API_KEY in .env.local}
+      APP_URL: ${APP_URL:-http://localhost}
+      MAIL_MODE: ${MAIL_MODE:-smtp}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-Tech Monitor <noreply@techmonitor.local>}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - techmonitor-net
+
+  # ── Sensor Reader (UART /dev/ttyS2) ────────────────────────────
+  sensor-reader:
+    build: ./sensor-reader
+    container_name: techmonitor-sensor-reader
+    restart: unless-stopped
+    environment:
+      API_URL: http://backend:3001/api/data
+      INGEST_API_KEY: ${INGEST_API_KEY:?Set INGEST_API_KEY in .env.local}
+      SERIAL_PATH: /dev/ttyS2
+      SENSOR_KEY: ${SENSOR_KEY:-temp_01}
+      SENSOR_TOKEN: ${SENSOR_TOKEN:-}
+      BAUD_RATE: 9600
+    devices:
+      - "/dev/ttyS2:/dev/ttyS2"
+    depends_on:
+      - backend
+    networks:
+      - techmonitor-net
+
+  # ── Frontend (Nginx + React) ───────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: techmonitor-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - techmonitor-net
+
+volumes:
+  mysql8_data:
+    driver: local
+
+networks:
+  techmonitor-net:
+    driver: bridge

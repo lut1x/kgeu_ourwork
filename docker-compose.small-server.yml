@@ -1,0 +1,38 @@
+x-small-logs: &small-logs
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+services:
+  mysql:
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD=$$MYSQL_ROOT_PASSWORD mysql --protocol=TCP -h127.0.0.1 -uroot -e "SELECT 1" >/dev/null 2>&1']
+    mem_limit: 320m
+    memswap_limit: 640m
+    cpus: 0.5
+    command:
+      - --innodb-buffer-pool-size=64M
+      - --innodb-redo-log-capacity=64M
+      - --performance-schema=OFF
+      - --max-connections=20
+      - --temptable-max-ram=16M
+      - --table-open-cache=256
+      - --skip-log-bin
+    logging: *small-logs
+  backend:
+    image: tech-scada-backend:deploy
+    build: !reset null
+    mem_limit: 256m
+    memswap_limit: 512m
+    cpus: 0.5
+    environment:
+      NODE_OPTIONS: --max-old-space-size=128
+      UV_THREADPOOL_SIZE: '1'
+    logging: *small-logs
+  frontend:
+    image: tech-scada-frontend:deploy
+    build: !reset null
+    mem_limit: 64m
+    memswap_limit: 128m
+    cpus: 0.25
+    logging: *small-logs

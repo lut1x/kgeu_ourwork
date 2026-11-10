@@ -1,0 +1,12 @@
+[Unit]
+Description=Consistent SQLite and configuration backup for SCADA gateway
+After=scada-gateway.service
+ConditionPathExists=/var/lib/scada-gateway/queue.sqlite
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/scada-gateway/backup.py
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=300
+UMask=0077

@@ -1,0 +1,10 @@
+[Unit]
+Description=Probe SCADA database, API and HTTPS; recover failed services
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/scada-recover
+TimeoutStartSec=180
+Nice=10

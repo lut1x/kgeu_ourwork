@@ -1,0 +1,44 @@
+CREATE TABLE IF NOT EXISTS sensor_groups (
+ id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ name VARCHAR(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS sensors (
+ id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ group_id INT UNSIGNED NOT NULL,
+ sensor_key VARCHAR(64) NOT NULL UNIQUE,
+ name VARCHAR(100) NOT NULL,
+ kind ENUM('temperature','rpm','voltage','pressure','flow','custom') NOT NULL,
+ unit VARCHAR(20) NOT NULL,
+ min_value DOUBLE NOT NULL,
+ max_value DOUBLE NOT NULL,
+ warning_value DOUBLE NULL,
+ critical_value DOUBLE NULL,
+ enabled BOOLEAN NOT NULL DEFAULT TRUE,
+ token_hash CHAR(64) NULL,
+ FOREIGN KEY (group_id) REFERENCES sensor_groups(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS user_group_access (
+ user_id INT UNSIGNED NOT NULL,
+ group_id INT UNSIGNED NOT NULL,
+ PRIMARY KEY (user_id,group_id),
+ FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+ FOREIGN KEY (group_id) REFERENCES sensor_groups(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS user_hidden_sensors (
+ user_id INT UNSIGNED NOT NULL,
+ sensor_id INT UNSIGNED NOT NULL,
+ PRIMARY KEY (user_id,sensor_id),
+ FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+ FOREIGN KEY (sensor_id) REFERENCES sensors(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS sensor_samples (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ sensor_id INT UNSIGNED NOT NULL,
+ value DOUBLE NOT NULL,
+ created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ FOREIGN KEY (sensor_id) REFERENCES sensors(id),
+ INDEX idx_sensor_time (sensor_id,created_at,id)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS telemetry_migrations (
+ name VARCHAR(60) PRIMARY KEY
+) ENGINE=InnoDB;
